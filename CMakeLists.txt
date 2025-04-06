@@ -5,8 +5,13 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(third-party/memory)
 
+add_subdirectory(third-party/imgui)
+
 add_executable(CS2_External src/main.cpp)
 
-target_link_libraries(CS2_External memory)
+target_link_libraries(CS2_External memory imgui)
 
-target_include_directories(CS2_External PRIVATE third-party/memory/include)
+target_include_directories(CS2_External PRIVATE
+        third-party/memory
+        third-party/imgui
+)
