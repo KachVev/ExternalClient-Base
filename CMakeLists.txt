@@ -5,10 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(third-party/memory)
 
-add_executable(CS2_External src/main.cpp
-        src/main.cpp
-        src/math/vector2.hpp
-        src/math/vector3.hpp
-)
+add_executable(CS2_External src/main.cpp)
 
 target_link_libraries(CS2_External memory)
+
+target_include_directories(CS2_External PRIVATE third-party/memory/include)
