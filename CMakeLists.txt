@@ -1,17 +1,35 @@
 cmake_minimum_required(VERSION 3.31)
-project(CS2_External)
+project(CS_Internal)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_GENERATOR_PLATFORM x64)
 
 add_subdirectory(third-party/memory)
-
+add_subdirectory(third-party/minhook)
 add_subdirectory(third-party/imgui)
 
-add_executable(CS2_External src/main.cpp)
+add_library(CS_Internal SHARED src/main.cpp
+        src/hooks/hook.hpp
+        src/hooks/hook.cpp
+        src/render/imgui_layer.hpp
+        src/render/imgui_layer.cpp
+        src/ui/menu.cpp
+        src/ui/menu.hpp
+)
 
-target_link_libraries(CS2_External memory imgui)
+target_link_libraries(CS_Internal
+        memory
+        minhook
+        imgui
+        d3d11
+        dxgi
+        dxguid
+        user32
+)
 
-target_include_directories(CS2_External PRIVATE
-        third-party/memory
-        third-party/imgui
+target_include_directories(CS_Internal PRIVATE
+        third-party/memory/include
+        third-party/minhook/include
+        third-party/imgui/include
+        third-party/imgui/include/backends
 )

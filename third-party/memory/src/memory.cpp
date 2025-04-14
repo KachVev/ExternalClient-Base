@@ -1,94 +1,79 @@
 #include "../include/memory.hpp"
 #include <tlhelp32.h>
 #include <iostream>
+#include <Psapi.h>
 
-Memory::Memory(const std::wstring& processName) : processName(processName) {
-    if (const DWORD pid = getPid(processName)) {
-        process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
-        if (process) {
-            std::wcout << L"[Memory] Opened " << processName << L" (PID: " << pid << L")\n";
-            processId = pid;
-        } else
-            std::wcerr << L"[Memory] Failed to open process. Error: " << GetLastError() << L"\n";
-    } else {
-        std::wcerr << L"[Memory] Process not found: " << processName << L"\n";
-    }
+Memory::Memory() {
+    processId_ = GetCurrentProcessId();
+    std::wcout << L"[Memory] Current PID: " << processId_ << L'\n';
 }
 
-Memory::~Memory() {
-    if (process)
-        CloseHandle(process);
-}
+uintptr_t Memory::getModule(const std::wstring& moduleName) {
+    HMODULE modules[1024];
+    DWORD needed;
 
-uintptr_t Memory::getModule(const std::wstring& moduleName) const {
-    if (!process) {
-        throw std::runtime_error("[Memory] Invalid process handle.");
+    if (!EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &needed)) {
+        std::wcerr << L"[Memory] Failed to enumerate modules.\n";
+        return 0;
     }
 
-    const DWORD pid = getPid(processName);
-    HANDLE modSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
-    if (modSnapshot == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error("[Memory] Failed to create module snapshot. Error: " + std::to_string(GetLastError()));
-    }
-
-    MODULEENTRY32W modEntry = { sizeof(MODULEENTRY32W) };
-    uintptr_t moduleBase = 0;
-
-    if (Module32FirstW(modSnapshot, &modEntry)) {
-        do {
-            if (_wcsicmp(modEntry.szModule, moduleName.c_str()) == 0) {
-                moduleBase = reinterpret_cast<uintptr_t>(modEntry.modBaseAddr);
-                break;
+    const auto count = needed / sizeof(HMODULE);
+    for (size_t i = 0; i < count; ++i) {
+        wchar_t modName[MAX_PATH];
+        if (GetModuleBaseNameW(GetCurrentProcess(), modules[i], modName, std::size(modName))) {
+            if (_wcsicmp(modName, moduleName.c_str()) == 0) {
+                return reinterpret_cast<uintptr_t>(modules[i]);
             }
-        } while (Module32NextW(modSnapshot, &modEntry));
-    } else {
-        CloseHandle(modSnapshot);
-        throw std::runtime_error("[Memory] Failed to retrieve the first module from the snapshot. Error: " + std::to_string(GetLastError()));
+        }
     }
 
-    CloseHandle(modSnapshot);
-    return moduleBase;
-}
-
-size_t Memory::getModuleSize(const std::wstring& moduleName) const {
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, processId);
-    if (snapshot == INVALID_HANDLE_VALUE) return 0;
-
-    MODULEENTRY32W entry = { sizeof(entry) };
-    if (Module32FirstW(snapshot, &entry)) {
-        do {
-            if (moduleName == entry.szModule) {
-                CloseHandle(snapshot);
-                return entry.modBaseSize;
-            }
-        } while (Module32NextW(snapshot, &entry));
-    }
-
-    CloseHandle(snapshot);
+    std::wcerr << L"[Memory] Failed to find module: " << moduleName << L'\n';
     return 0;
 }
 
-DWORD Memory::getPid(const std::wstring& name) {
-    DWORD pid = 0;
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snapshot == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error("[Memory] Failed to create process snapshot. Error: " + std::to_string(GetLastError()));
-    }
+void* Memory::findPattern(const uintptr_t moduleBase, const char* pattern) {
+#define INRANGE(x,a,b)    ((x) >= (a) && (x) <= (b))
+#define GETBITS(x)        (INRANGE((x & (~0x20)), 'A', 'F') ? ((x & (~0x20)) - 'A' + 0xA) : (INRANGE(x, '0', '9') ? (x - '0') : 0))
+#define GETBYTE(x)        (GETBITS(x[0]) << 4 | GETBITS(x[1]))
 
-    PROCESSENTRY32W procEntry = { sizeof(PROCESSENTRY32W) };
+    if (!moduleBase)
+        return nullptr;
 
-    if (Process32FirstW(snapshot, &procEntry)) {
-        do {
-            if (_wcsicmp(procEntry.szExeFile, name.c_str()) == 0) {
-                pid = procEntry.th32ProcessID;
-                break;
+    auto start = reinterpret_cast<BYTE*>(moduleBase);
+    const auto dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(start);
+    const auto ntHeaders = reinterpret_cast<PIMAGE_NT_HEADERS>(start + dosHeader->e_lfanew);
+
+    const size_t sizeOfImage = ntHeaders->OptionalHeader.SizeOfImage;
+
+    const BYTE* end = start + sizeOfImage - 0x1000;
+    start += 0x1000;
+
+    const char* currentPattern = pattern;
+    BYTE* firstMatch = nullptr;
+
+    for (; start < end; ++start) {
+        if (*currentPattern == '\0')
+            break;
+
+        if (const bool skipByte = (*currentPattern == '\?'); skipByte || *start == GETBYTE(currentPattern)) {
+            if (!firstMatch)
+                firstMatch = start;
+
+            currentPattern += skipByte ? 2 : 3;
+
+            if (currentPattern[-1] == '\0') {
+                return firstMatch;
             }
-        } while (Process32NextW(snapshot, &procEntry));
-    } else {
-        CloseHandle(snapshot);
-        throw std::runtime_error("[Memory] Failed to retrieve the first process from the snapshot. Error: " + std::to_string(GetLastError()));
+        } else if (firstMatch) {
+            start = firstMatch;
+            firstMatch = nullptr;
+            currentPattern = pattern;
+        }
     }
 
-    CloseHandle(snapshot);
-    return pid;
+    return nullptr;
+
+#undef INRANGE
+#undef GETBITS
+#undef GETBYTE
 }

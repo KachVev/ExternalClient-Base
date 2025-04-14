@@ -1,18 +1,25 @@
-#include <memory.hpp>
+#include <Windows.h>
 
-void memory(const Memory& mem, const uintptr_t clientDll) {
-    const auto entityList = mem.read<uintptr_t>(clientDll + 0x01873F18);
-    std::cout << "entityList: " << std::hex << entityList << std::dec << "\n";
+#include "hooks/hook.hpp"
 
-    const auto entity = mem.read<uintptr_t>(entityList + 0x10);
-    std::cout << "entity: " << std::hex << entity << std::dec << "\n";
+void setupConsole() {
+    AllocConsole();
+    freopen_s(reinterpret_cast<FILE**>(stdin), "CONIN$", "r", stdin);
+    freopen_s(reinterpret_cast<FILE**>(stdout), "CONOUT$", "w", stdout);
+    freopen_s(reinterpret_cast<FILE**>(stderr), "CONOUT$", "w", stderr);
+    SetConsoleTitleA("GMOD Internal");
 }
 
-int main() {
-    const Memory mem(L"cs2.exe");
-    const auto clientDll = mem.getModule(L"client.dll");
-    std::cout << "client.dll: " << std::hex << clientDll << std::dec << "\n";
-
-    memory(mem, clientDll);
+DWORD WINAPI MainThread(LPVOID) {
+    setupConsole();
+    Hooks::Init();
     return 0;
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID) {
+    if (reason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(hModule);
+        CreateThread(nullptr, 0, MainThread, nullptr, 0, nullptr);
+    }
+    return TRUE;
 }

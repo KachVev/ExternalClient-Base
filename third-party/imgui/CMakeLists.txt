@@ -1,15 +1,11 @@
-file(GLOB IMGUI_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/backends/imgui_impl_dx11.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/backends/imgui_impl_win32.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/imgui.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/imgui_demo.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/imgui_tables.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/imgui_widgets.cpp
+file(GLOB IMGUI_SRC
+        src/*.cpp
+        src/backends/*.cpp
 )
 
-add_library(imgui STATIC ${IMGUI_SOURCES})
+add_library(imgui STATIC ${IMGUI_SRC})
 
 target_include_directories(imgui PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/backends
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/backends
 )
