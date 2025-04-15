@@ -7,7 +7,7 @@ void setupConsole() {
     freopen_s(reinterpret_cast<FILE**>(stdin), "CONIN$", "r", stdin);
     freopen_s(reinterpret_cast<FILE**>(stdout), "CONOUT$", "w", stdout);
     freopen_s(reinterpret_cast<FILE**>(stderr), "CONOUT$", "w", stderr);
-    SetConsoleTitleA("GMOD Internal");
+    SetConsoleTitleA("CS2 Internal");
 }
 
 DWORD WINAPI MainThread(LPVOID) {

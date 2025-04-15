@@ -1,11 +1,9 @@
 #include <imgui.h>
 #include "menu.hpp"
 #include <iostream>
-
 #include "../fonts/IconsFontAwesome6.h"
 
 namespace Menu {
-
     void SetupStyle() {
         static bool styleInit = false;
         if (styleInit) return;
@@ -21,63 +19,57 @@ namespace Menu {
         styleInit = true;
     }
 
-    void RenderTopBar(const ImVec2& winPos, const ImVec2& winSize) {
-        constexpr float headerHeight = 60.0f;
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-        drawList->AddLine(
-            ImVec2(winPos.x, winPos.y + headerHeight),
-            ImVec2(winPos.x + winSize.x, winPos.y + headerHeight),
-            ImColor(24, 25, 36),
-            2.0f
-        );
+    void RenderTopBar(const ImVec2& pos, const ImVec2& size) {
+        constexpr float h = 60.0f, btn = 28.0f;
+        auto* dl = ImGui::GetWindowDrawList();
+
+        dl->AddLine({pos.x, pos.y + h}, {pos.x + size.x, pos.y + h}, ImColor(24, 25, 36), 2.0f);
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor(35, 35, 45, 255).Value);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor(50, 50, 60, 255).Value);
+        ImGui::PushStyleColor(ImGuiCol_Button,        {0, 0, 0, 0});
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor(35, 35, 45).Value);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImColor(50, 50, 60).Value);
 
-        constexpr float buttonSize = 28.0f;
-        const float buttonX = winPos.x + winSize.x - buttonSize - 16.0f;
-        const float buttonY = winPos.y + (headerHeight - buttonSize) * 0.5f;
+        ImGui::SetCursorScreenPos({pos.x + size.x - btn - 16.0f, pos.y + (h - btn) * 0.5f});
+        if (ImGui::InvisibleButton("##SettingsBtn", {btn, btn}))
+            std::cout << "Test\n";
 
-        ImGui::SetCursorScreenPos(ImVec2(buttonX, buttonY));
-        if (ImGui::InvisibleButton("##SettingsBtn", ImVec2(buttonSize, buttonSize))) {
-            std::cout << "Test" << std::endl;
-        }
+        ImVec2 iconPos = ImGui::GetItemRectMin();
+        ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_GEAR);
+        ImVec2 iconCenter = {iconPos.x + (btn - iconSize.x) * 0.5f, iconPos.y + (btn - iconSize.y) * 0.5f + 3.0f};
 
-        const ImVec2 iconPos = ImGui::GetItemRectMin();
-        const ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_GEAR);
-        const auto iconCenter = ImVec2(
-            iconPos.x + (buttonSize - iconSize.x) * 0.5f,
-            iconPos.y + (buttonSize - iconSize.y) * 0.5f + 3.0f
-        );
-
-        drawList->AddText(iconCenter, ImColor(255, 255, 255, 255), ICON_FA_GEAR);
+        dl->AddText(iconCenter, ImColor(255, 255, 255), ICON_FA_GEAR);
 
         ImGui::PopStyleColor(3);
         ImGui::PopFont();
     }
 
+    void RenderLeftBar(const ImVec2& pos, const ImVec2& size) {
+        constexpr float h = 60.0f, offset = 180.0f, thickness = 3.0f;
+        auto* dl = ImGui::GetWindowDrawList();
+
+        dl->AddLine(
+            {pos.x + offset, pos.y + h + thickness / 2.0f},
+            {pos.x + offset, pos.y + size.y},
+            ImColor(24, 25, 36),
+            thickness
+        );
+    }
 
     void Render() {
         SetupStyle();
+        ImGui::SetNextWindowSize({900, 500}, ImGuiCond_Once);
+        ImGui::SetNextWindowPos({300, 200}, ImGuiCond_Once);
 
-        ImGui::SetNextWindowSize(ImVec2(900, 500), ImGuiCond_Once);
-        ImGui::SetNextWindowPos(ImVec2(300, 200), ImGuiCond_Once);
         bool open = true;
+        ImGui::Begin("##MainWindow", &open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 
-        ImGui::Begin("##MainWindow",
-            &open,
-            ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoResize |
-            ImGuiWindowFlags_NoCollapse);
+        ImVec2 pos = ImGui::GetWindowPos();
+        ImVec2 size = ImGui::GetWindowSize();
 
-        ImVec2 winPos = ImGui::GetWindowPos();
-        ImVec2 winSize = ImGui::GetWindowSize();
-
-        RenderTopBar(winPos, winSize);
-
+        RenderTopBar(pos, size);
+        RenderLeftBar(pos, size);
 
         ImGui::End();
     }

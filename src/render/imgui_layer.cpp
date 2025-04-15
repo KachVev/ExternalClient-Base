@@ -64,7 +64,6 @@ void SetupFonts() {
     const std::string iconFontPath = (fontDir / "awesome.ttf").string();
     const std::string poppinsFontPath = (fontDir / "poppins.ttf").string();
 
-    std::cout << iconFontPath << std::endl;
     io.Fonts->AddFontFromFileTTF(poppinsFontPath.c_str(), 16.0f);
 
     static constexpr ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
