@@ -1,99 +1,85 @@
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui_internal.h>
 #include <imgui.h>
 #include "menu.hpp"
+#include <iostream>
 
-#include <string>
+#include "../fonts/IconsFontAwesome6.h"
 
 namespace Menu {
-    static ImVec2 pos = { 200, 200 };
-    static ImVec2 dragOffset = { 0, 0 };
-    static bool dragging = false;
-    static int activeTab = 0;
-    static bool hoveringInteractive = false;
 
-    constexpr float MENU_WIDTH = 600.0f;
-    constexpr float MENU_HEIGHT = 420.0f;
-    constexpr float SIDEBAR_WIDTH = 60.0f;
-    constexpr float ICON_SIZE = 26.0f;
-    constexpr int ICON_COUNT = 6;
-    constexpr float BORDER_RADIUS = 10.0f;
+    void SetupStyle() {
+        static bool styleInit = false;
+        if (styleInit) return;
 
-    const char* iconLabels[ICON_COUNT] = { "A", "B", "C", "D", "E", "F" };
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.WindowRounding = 7.0f;
+        style.WindowBorderSize = 0.0f;
+        style.FrameBorderSize = 0.0f;
+        style.WindowPadding = ImVec2(16, 16);
+        style.Colors[ImGuiCol_WindowBg] = ImColor(19, 20, 31);
+        style.Colors[ImGuiCol_Border] = ImColor(0, 0, 0, 0);
 
-    void HandleDragging() {
-        const ImGuiIO& io = ImGui::GetIO();
-        const ImVec2 mousePos = io.MousePos;
-        ImVec2 menuEnd = pos + ImVec2(MENU_WIDTH, MENU_HEIGHT);
+        styleInit = true;
+    }
 
-        bool hovered = mousePos.x >= pos.x && mousePos.x <= menuEnd.x &&
-                       mousePos.y >= pos.y && mousePos.y <= menuEnd.y;
+    void RenderTopBar(const ImVec2& winPos, const ImVec2& winSize) {
+        constexpr float headerHeight = 60.0f;
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-        if (hovered && ImGui::IsMouseClicked(0) && !hoveringInteractive) {
-            dragging = true;
-            dragOffset = mousePos - pos;
+        drawList->AddLine(
+            ImVec2(winPos.x, winPos.y + headerHeight),
+            ImVec2(winPos.x + winSize.x, winPos.y + headerHeight),
+            ImColor(24, 25, 36),
+            2.0f
+        );
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImColor(35, 35, 45, 255).Value);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImColor(50, 50, 60, 255).Value);
+
+        constexpr float buttonSize = 28.0f;
+        const float buttonX = winPos.x + winSize.x - buttonSize - 16.0f;
+        const float buttonY = winPos.y + (headerHeight - buttonSize) * 0.5f;
+
+        ImGui::SetCursorScreenPos(ImVec2(buttonX, buttonY));
+        if (ImGui::InvisibleButton("##SettingsBtn", ImVec2(buttonSize, buttonSize))) {
+            std::cout << "Test" << std::endl;
         }
 
-        if (!ImGui::IsMouseDown(0))
-            dragging = false;
+        const ImVec2 iconPos = ImGui::GetItemRectMin();
+        const ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_GEAR);
+        const auto iconCenter = ImVec2(
+            iconPos.x + (buttonSize - iconSize.x) * 0.5f,
+            iconPos.y + (buttonSize - iconSize.y) * 0.5f + 3.0f
+        );
 
-        if (dragging)
-            pos = mousePos - dragOffset;
+        drawList->AddText(iconCenter, ImColor(255, 255, 255, 255), ICON_FA_GEAR);
+
+        ImGui::PopStyleColor(3);
+        ImGui::PopFont();
     }
 
-    void RenderSidebar(ImDrawList* draw) {
-        ImVec2 sidebarEnd = pos + ImVec2(SIDEBAR_WIDTH, MENU_HEIGHT);
-        draw->AddRectFilled(pos, sidebarEnd, IM_COL32(50, 50, 50, 200), BORDER_RADIUS, ImDrawFlags_RoundCornersLeft);
-
-        float totalIconSpace = ICON_COUNT * ICON_SIZE;
-        float spacing = (MENU_HEIGHT - totalIconSpace) / (ICON_COUNT + 1);
-
-        ImGuiIO& io = ImGui::GetIO();
-        hoveringInteractive = false;
-
-        for (int i = 0; i < ICON_COUNT; ++i) {
-            ImVec2 iconPos = pos + ImVec2(0, spacing * (i + 1) + ICON_SIZE * i);
-            ImVec2 iconCenter = iconPos + ImVec2(SIDEBAR_WIDTH / 2, ICON_SIZE / 2);
-            ImVec2 iconEnd = iconPos + ImVec2(SIDEBAR_WIDTH, ICON_SIZE);
-            ImVec2 textSize = ImGui::CalcTextSize(iconLabels[i]);
-
-            if (i == activeTab) {
-                draw->AddRectFilled(iconPos + ImVec2(10, 0), iconPos + ImVec2(SIDEBAR_WIDTH - 10, ICON_SIZE),
-                                    IM_COL32(100, 100, 255, 180), 6.0f);
-            }
-
-            draw->AddText(iconCenter - textSize * 0.5f, IM_COL32(200, 200, 255, 255), iconLabels[i]);
-
-            bool hovered = io.MousePos.x >= iconPos.x && io.MousePos.x <= iconEnd.x &&
-                           io.MousePos.y >= iconPos.y && io.MousePos.y <= iconEnd.y;
-
-            if (hovered) {
-                hoveringInteractive = true;
-
-                if (ImGui::IsMouseClicked(0)) {
-                    activeTab = i;
-                }
-            }
-        }
-    }
-
-    void RenderMainPanel(ImDrawList* draw) {
-        ImVec2 mainStart = pos + ImVec2(SIDEBAR_WIDTH, 0);
-        ImVec2 mainEnd = pos + ImVec2(MENU_WIDTH, MENU_HEIGHT);
-
-        draw->AddRectFilled(mainStart, mainEnd, IM_COL32(25, 25, 25, 255), BORDER_RADIUS, ImDrawFlags_RoundCornersRight);
-
-        draw->AddText(mainStart + ImVec2(20, 20), IM_COL32(255, 255, 255, 255),
-                      ("Main Panel: Tab " + std::to_string(activeTab)).c_str());
-    }
 
     void Render() {
-        hoveringInteractive = false;
+        SetupStyle();
 
-        HandleDragging();
-        ImDrawList* draw = ImGui::GetBackgroundDrawList();
+        ImGui::SetNextWindowSize(ImVec2(900, 500), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(300, 200), ImGuiCond_Once);
+        bool open = true;
 
-        RenderSidebar(draw);
-        RenderMainPanel(draw);
+        ImGui::Begin("##MainWindow",
+            &open,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoCollapse);
+
+        ImVec2 winPos = ImGui::GetWindowPos();
+        ImVec2 winSize = ImGui::GetWindowSize();
+
+        RenderTopBar(winPos, winSize);
+
+
+        ImGui::End();
     }
+
 }
