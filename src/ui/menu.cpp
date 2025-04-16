@@ -36,10 +36,10 @@ namespace Menu {
             std::cout << "Test\n";
 
         ImVec2 iconPos = ImGui::GetItemRectMin();
-        ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_GEAR);
+        ImVec2 iconSize = ImGui::CalcTextSize(FontAwesome::ICON_FA_GEAR);
         ImVec2 iconCenter = {iconPos.x + (btn - iconSize.x) * 0.5f, iconPos.y + (btn - iconSize.y) * 0.5f + 3.0f};
 
-        dl->AddText(iconCenter, ImColor(255, 255, 255), ICON_FA_GEAR);
+        dl->AddText(iconCenter, ImColor(255, 255, 255), FontAwesome::ICON_FA_GEAR);
 
         ImGui::PopStyleColor(3);
         ImGui::PopFont();
